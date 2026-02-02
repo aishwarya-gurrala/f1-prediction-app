@@ -1,0 +1,75 @@
+{
+  "selected_model": "xgboost",
+  "metrics": {
+    "accuracy": 0.9952883528081418,
+    "roc_auc": 0.9996071702320396,
+    "pr_auc": 0.9919478599736469,
+    "brier": 0.0035399190860143023,
+    "model": "xgboost",
+    "features_used": [
+      "grid",
+      "qual_position",
+      "driver_points_to_date",
+      "constructor_points_to_date",
+      "points"
+    ]
+  },
+  "all_models": [
+    {
+      "accuracy": 0.977761025254429,
+      "roc_auc": 0.9890138317887255,
+      "pr_auc": 0.781951356412384,
+      "brier": 0.015872152406891406,
+      "model": "logreg_balanced",
+      "features_used": [
+        "grid",
+        "qual_position",
+        "driver_points_to_date",
+        "constructor_points_to_date",
+        "points"
+      ]
+    },
+    {
+      "accuracy": 0.996607614021862,
+      "roc_auc": 0.9988620131001325,
+      "pr_auc": 0.9849031930621778,
+      "brier": 0.005095817620327793,
+      "model": "random_forest",
+      "features_used": [
+        "grid",
+        "qual_position",
+        "driver_points_to_date",
+        "constructor_points_to_date",
+        "points"
+      ]
+    },
+    {
+      "accuracy": 0.9954768186958161,
+      "roc_auc": 0.9993497839871786,
+      "pr_auc": 0.9851607370085333,
+      "brier": 0.007260767042795701,
+      "model": "grad_boosting",
+      "features_used": [
+        "grid",
+        "qual_position",
+        "driver_points_to_date",
+        "constructor_points_to_date",
+        "points"
+      ]
+    },
+    {
+      "accuracy": 0.9952883528081418,
+      "roc_auc": 0.9996071702320396,
+      "pr_auc": 0.9919478599736469,
+      "brier": 0.0035399190860143023,
+      "model": "xgboost",
+      "features_used": [
+        "grid",
+        "qual_position",
+        "driver_points_to_date",
+        "constructor_points_to_date",
+        "points"
+      ]
+    }
+  ]
+}

@@ -226,7 +226,11 @@ def main():
         st.write("Predicts F1 win odds using **pre-race** signals only (no leakage).")
         st.write("**Stack:** XGBoost · scikit-learn · Streamlit")
         st.write("**Validation:** the **entire last season** is held out.")
-
+import streamlit as st
+st.write("CSV_PATH =", CSV_PATH)
+st.write("CWD =", os.getcwd())
+st.write("Files in repo root =", os.listdir("."))
+    
     # Load data/model with cache-bust via file mtime
     mtime = os.path.getmtime(CSV_PATH)
     df, X, y, train_mask, test_mask, meta = load_data(CSV_PATH, mtime)

@@ -2,6 +2,8 @@
 # (Leakage-Safe + Season/Race/Driver selectors + Compare + Compact Metrics + ROC + Streaks + Insights)
 
 import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -27,7 +29,9 @@ plt.rcParams.update({
 })
 
 # --------------------------- CONFIG ---------------------------------
-CSV_PATH = r"C:\Users\aishw\OneDrive\Desktop\F1predictoncap\Data\f1_data.csv"
+BASE_DIR = Path(__file__).resolve().parent
+CSV_PATH = BASE_DIR / "Data" / "f1_data.csv"
+
 APP_TITLE = "Formula 1 — Win Probability Predictor (Leakage-Safe)"
 st.set_page_config(page_title="F1 Win Predictor", layout="wide")
 
@@ -220,20 +224,16 @@ def main():
     if st.sidebar.button("↻ Refresh data & model"):
         st.cache_data.clear()
         st.cache_resource.clear()
-        st.experimental_rerun()
+        st.rerun()
 
     with st.sidebar.expander("👋 About this app", expanded=True):
         st.write("Predicts F1 win odds using **pre-race** signals only (no leakage).")
         st.write("**Stack:** XGBoost · scikit-learn · Streamlit")
         st.write("**Validation:** the **entire last season** is held out.")
-import streamlit as st
-st.write("CSV_PATH =", CSV_PATH)
-st.write("CWD =", os.getcwd())
-st.write("Files in repo root =", os.listdir("."))
-    
+
     # Load data/model with cache-bust via file mtime
-    mtime = os.path.getmtime(CSV_PATH)
-    df, X, y, train_mask, test_mask, meta = load_data(CSV_PATH, mtime)
+    mtime = CSV_PATH.stat().st_mtime
+    df, X, y, train_mask, test_mask, meta = load_data(str(CSV_PATH), mtime)
     model, metrics = train_and_eval(X, y, train_mask, test_mask)
     df = build_lookup_frames(df)
 
@@ -315,11 +315,13 @@ st.write("Files in repo root =", os.listdir("."))
                 out["race"] = race_label
                 out["scenario_name"] = scen_name
                 out["note"] = scen_note
-                out_path = os.path.join(os.path.dirname(CSV_PATH), "saved_scenarios.csv")
-                if os.path.exists(out_path):
+
+                out_path = CSV_PATH.parent / "saved_scenarios.csv"
+                if out_path.exists():
                     out.to_csv(out_path, mode="a", header=False, index=False)
                 else:
                     out.to_csv(out_path, index=False)
+
                 st.success(f"Saved “{scen_name}” → {out_path}")
 
         with right:
@@ -352,6 +354,7 @@ st.write("Files in repo root =", os.listdir("."))
 
         if multi_sel:
             rows = []
+            feature_order = metrics["feature_order"]
             for name in multi_sel:
                 r = driver_table[driver_table["driver_name"] == name].iloc[0].to_dict()
                 row = pd.DataFrame([{
@@ -407,10 +410,22 @@ st.write("Files in repo root =", os.listdir("."))
 
         # Rolling 3-round win count up to current round
         sdf = sdf.sort_values(["driver_name", "round"])
-        sdf["rolling_wins_3"] = sdf.groupby("driver_name")["win"].rolling(3, min_periods=1).sum().reset_index(level=0, drop=True)
-        cur = sdf[sdf["round"] == round_selected][["driver_name", "rolling_wins_3"]].sort_values("rolling_wins_3", ascending=False).head(10)
+        sdf["rolling_wins_3"] = (
+            sdf.groupby("driver_name")["win"]
+            .rolling(3, min_periods=1)
+            .sum()
+            .reset_index(level=0, drop=True)
+        )
+        cur = (
+            sdf[sdf["round"] == round_selected][["driver_name", "rolling_wins_3"]]
+            .sort_values("rolling_wins_3", ascending=False)
+            .head(10)
+        )
         st.caption(f"Top rolling **3-round** winners up to Round {round_selected}")
-        st.dataframe(cur.rename(columns={"driver_name": "Driver", "rolling_wins_3": "Wins (last 3 rounds)"}), use_container_width=True)
+        st.dataframe(
+            cur.rename(columns={"driver_name": "Driver", "rolling_wins_3": "Wins (last 3 rounds)"}),
+            use_container_width=True
+        )
         if not cur.empty:
             fig, ax = plt.subplots(figsize=(5.2, 3.0))
             ax.barh(cur["driver_name"][::-1], cur["rolling_wins_3"][::-1])
@@ -427,10 +442,8 @@ st.write("Files in repo root =", os.listdir("."))
         race_df = df[(df["year"] == season) & (df["round"] == round_selected)].copy()
         race_df["driver_name"] = _driver_name_series(race_df)
 
-        # Ensure feature columns present; predict per-driver win prob for this race
+        # Predict per-driver win prob for this race
         feature_order = metrics["feature_order"]
-        safe_cols = [c for c in feature_order if c in race_df.columns]
-        # if any are missing, fill in from current UI (season/round already match)
         for col, val in {
             "grid": grid,
             "qual_position": qual_position,
@@ -466,8 +479,11 @@ st.write("Files in repo root =", os.listdir("."))
 
         # Visual: small bar comparison
         fig, ax = plt.subplots(figsize=(5, 2))
-        ax.barh(["Field Avg", chosen_driver], [avg_prob * 100, driver_prob * 100],
-                color=["#94a3b8", "#0ea5e9"])
+        ax.barh(
+            ["Field Avg", chosen_driver],
+            [avg_prob * 100, driver_prob * 100],
+            color=["#94a3b8", "#0ea5e9"],
+        )
         ax.set_xlim(0, 100)
         ax.set_xlabel("Predicted Win Probability (%)")
         for i, v in enumerate([avg_prob * 100, driver_prob * 100]):
@@ -480,7 +496,9 @@ st.write("Files in repo root =", os.listdir("."))
         top3_display["predicted_win_prob"] = (top3_display["predicted_win_prob"] * 100).round(2)
         st.dataframe(
             top3_display.rename(columns={
-                "driver_name": "Driver", "grid": "Grid Position", "predicted_win_prob": "Win Probability (%)"
+                "driver_name": "Driver",
+                "grid": "Grid Position",
+                "predicted_win_prob": "Win Probability (%)"
             }),
             use_container_width=True
         )
@@ -490,7 +508,10 @@ st.write("Files in repo root =", os.listdir("."))
             board = race_df[["driver_name", "grid", "predicted_win_prob"]].copy()
             board["Win Probability (%)"] = (board["predicted_win_prob"] * 100).round(2)
             board = board.sort_values("predicted_win_prob", ascending=False)
-            st.dataframe(board.drop(columns=["predicted_win_prob"]).rename(columns={"driver_name": "Driver", "grid": "Grid"}), use_container_width=True)
+            st.dataframe(
+                board.drop(columns=["predicted_win_prob"]).rename(columns={"driver_name": "Driver", "grid": "Grid"}),
+                use_container_width=True
+            )
 
         st.info(
             "💬 **Race Takeaway:** Win probability reflects not just driver skill — but how grid position, "
